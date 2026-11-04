@@ -197,7 +197,7 @@ gh workflow run pages.yml --repo WangXP7/ai-model-world --ref main
 实测同一份 157 KB 有时 4 秒下完、有时 60 秒超时——瓶颈是国际链路丢包/限速，
 不是体积。因此「把首页降到 200 KB」这个说法不准确，纯粹瘦身治不了慢。
 
-### 已做两件事
+### 做过两件事（其中一件已按用户要求下线）
 
 **1. 首屏瘦身（`scripts/pages/split-flight.ts`，已接入 `pages.yml`）**
 把大页面内联的 React Flight 数据（`self.__next_f.push`）挪到同目录 `.flight.js`，
@@ -206,17 +206,19 @@ gh workflow run pages.yml --repo WangXP7/ai-model-world --ref main
 浏览器复验：水合正常、搜索索引成功加载、零关键资源失败。
 不破坏任何页面逻辑，页面源码一行未改。
 
-**2. 国内节点镜像（真正解决秒开）**
-另构建一份**不带 `NEXT_BASE_PATH`** 的根路径产物（独立域名不能带 `/ai-model-world/` 前缀），
-发布到 <https://under-the-eaves.app.workbuddy.host/>。
-实测首页 0.34–0.54 秒返回，时间线 / 排行榜 / credits / 字体 / 搜索索引全部 200，
+**2. 国内节点镜像（已下线，方案保留）**
+曾构建一份**不带 `NEXT_BASE_PATH`** 的根路径产物（独立域名不能带 `/ai-model-world/` 前缀），
+发布到 <https://under-the-eaves.app.workbuddy.host/>。实测首页 0.34–0.54 秒返回
+（GitHub Pages 为 0.8–60 秒），时间线 / 排行榜 / credits / 字体 / 搜索索引全部 200，
 裸路径与带 `?v=` 的响应内容一致（无边缘缓存污染）。
+**该链接已按用户要求恢复为「Tidewater 海岛钓鱼」**，所以大模型世界目前只剩
+GitHub Pages 一个在线入口；国内访问慢要靠下面的 Vercel / EdgeOne / 自定义域名解决。
 
-> ⚠️ **发布位副作用**：该链接是此工作区唯一的发布位，原先挂的是「Tidewater 海岛钓鱼」。
-> 工具按工作区复用 appId，即使换一个工作区外的目录也不会新建独立应用，
-> 所以这次发布覆盖了 Tidewater 的在线内容。它的本地文件
-> （`GoodCase/tidewater-fish-site/`）完好，随时可从该目录重新发布恢复，
-> 但那会再次覆盖当前站点——两者只能二选一。
+> ⚠️ **发布位只有一个**：工具按工作区复用 appId，即使把项目放到工作区外的全新目录
+> 也不会新建独立应用。`under-the-eaves.app.workbuddy.host` 先后挂过《檐下》、
+> Tidewater、大模型世界，每次重发都会覆盖上一个。要再挂回大模型世界，
+> 先 `npm ci && NODE_OPTIONS= NEXT_DIST_DIR=out npx next build`（不设 `NEXT_BASE_PATH`）
+> 生成根路径产物，再从该目录发布；代价是 Tidewater 再次下线。
 
 ### 还没做的：Vercel / EdgeOne / 自定义域名
 
