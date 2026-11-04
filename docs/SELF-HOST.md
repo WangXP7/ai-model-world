@@ -51,13 +51,13 @@
 
 | 工作流 | 触发 | 作用 |
 |---|---|---|
-| `sync.yml` | 定时 + 手动 | 抓上游、校验、把数据快照提交回仓库；失败自动开 issue 留痕 |
+| `sync.yml` | 定时 + 手动 | 抓上游 → 管线闸门 → 上游健康守卫 → 提交数据快照并通知重建；失败自动开 issue |
 | `pages.yml` | push(main)、`repository_dispatch`、手动、定时兜底 | 构建静态站点并发布到 GitHub Pages |
 | `toy.yml` | 仅手动 | 上游的 B 站 Toy 发布通道，本 fork 无平台凭据，加前置 guard 后默认跳过 |
 
 ---
 
-## 三、改动背后的六个坑
+## 三、改动背后的七个坑
 
 1. **`GITHUB_TOKEN` 产生的 push 不会触发新的工作流运行。**
    数据同步提交快照后，Pages 不会因为那次 push 自动重建。所以 `sync.yml` 末尾用
@@ -90,6 +90,16 @@
    但本地实测删掉后客户端导航会在控制台刷出一串 404（页面仍能跳转，只是退回整页导航）。
    GitHub Pages 没有体积限制，这些文本压缩率又极高，所以本 fork 保留它们，
    让交互与源站完全一致。`.nojekyll` 仍加上，保险起见防止 `_next/` 被静态站点构建器过滤。
+
+7. **某个上游整体挂掉时，管线闸门可能放行坏数据。** 2026-11-04 手动跑同步时
+   LiveBench 返回「没有拿到任何可用 release」，`sync-report.json` 里
+   `sources.livebench.ok=false`，但 `accepted=true`、`failures=[]`：闸门盯的是存活模型数
+   与字段覆盖率，没把「一整类成绩静默清空」判成失败，一次提交删掉约 3975 条
+   `coding[]` / `scores[]` 成绩，榜单参赛模型数 114 → 1、134 → 3。
+   处理：把 `data/` 回滚到上一份完整快照（732 模型 / 6365 条成绩），并在 `sync.yml`
+   提交步骤前加 `scripts/sync/health.ts` —— 比较新旧快照的成绩条目总数，
+   跌幅超 30% 就不提交，只发 `::warning::` 保留旧数据、不让链路变红也不误开 issue；
+   上游恢复后自动放行。既有数据管线代码一行未改。
 
 > 本地 Windows Git Bash 补充坑：以 `/` 开头的环境变量会被 MSYS 改写成 Windows 绝对路径，
 > `NEXT_BASE_PATH=/ai-model-world` 会变成 `D:/.../ai-model-world` 并让 `next build` 报
@@ -169,7 +179,7 @@ gh workflow run pages.yml --repo WangXP7/ai-model-world --ref main
 
 ## 九、与上游的关系
 
-页面、数据管线、角色形象、文案生成逻辑一律未改，MIT 许可与
+页面、既有数据管线、角色形象、文案生成逻辑一律未改，MIT 许可与
 [NOTICE.md](../NOTICE.md) 的第三方署名义务照旧；站内 `/credits/` 页与页脚的原作者链接均保留。
-本 fork 只新增/调整了 `.github/workflows/`、README 顶部说明与本文档，
-以及 `docs/ARCHITECTURE.md` 末尾的部署差异备注。
+本 fork 只新增/调整了 `.github/workflows/`、一个工作流层的 `scripts/sync/health.ts`
+守卫、README 顶部说明与本文档，以及 `docs/ARCHITECTURE.md` 末尾的部署差异备注。

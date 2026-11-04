@@ -62,8 +62,17 @@ jobs:
       - name: 抓取并归一化
         run: npm run sync
 
+      # 补一道工作流层的健康守卫。2026-11-04 LiveBench 整体抓取失败时，
+      # 管线仍然 accepted=true，却把约 3975 条编程成绩静默清空并提交了。
+      # 这里比较新快照与 HEAD 快照的成绩条目数，跌幅超阈值就不提交，
+      # 让仓库保留上一份完整数据；只发 warning，不让链路变红、不误开 issue。
+      - name: 检查上游健康
+        id: health
+        run: npx tsx scripts/sync/health.ts
+
       - name: 提交快照
         id: commit
+        if: steps.health.outputs.healthy == 'true'
         run: |
           if git diff --quiet -- data/; then
             echo "上游无变化，跳过提交"
