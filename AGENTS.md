@@ -23,4 +23,6 @@ This block is written and re-added by `next dev` — verify at `node_modules/nex
 - 改了 UI → 用 Playwright 在 1440 / 390 两个断点截图自查，用户很在意字号与背景是否干扰阅读。
 - 生产构建用 `NEXT_DIST_DIR=.next-build npm run build`，别把 dev 的 `.next` 写坏。
 
-全程用中文与用户交流。仓库目前零 commit、未建远程，建仓与部署要等用户点头。
+全程用中文与用户交流。本仓库是 fork 的自建部署版，站点已上线 GitHub Pages
+（<https://wangxp7.github.io/ai-model-world/>），数据同步与发布链路见
+`docs/SELF-HOST.md`；改部署相关配置前先读那份文档。

@@ -1,20 +1,16 @@
-name: 发布到 B 站 Toy
+name: 发布到 B 站 Toy（需自备凭据）
 
-# 每天一次，把最新快照打包送审。
+# 原项目的第二发布通道，本 fork 保留，但默认不启用。
 #
-# 每次送审都要平台人工过一遍，所以不跟着同步管线每 12 小时跑：
-# 每天最多一次，而且只在页面内容真有变化时才送（判据见 scripts/toy/should-publish.ts）。
-# 上一版被驳回时不自动重发，直接失败开 issue，等人看过再说。
+# 本仓库已改用 GitHub Pages 发布，没有原作者的 Toy 登录凭据，TOY_ID 也不是自己的应用。
+# 若保留每日定时，它只会每天失败一次并自动开一条 issue。所以改成纯手动触发，
+# 并用一个前置 job 检查 Secret：没配置就干净地跳过，整个运行仍是绿的。
 #
-# 登录凭据放在仓库 Secret `TOY_CLI_SESSION_TOKEN`，就是本机 ~/.toy/session.json 里的 session_token。
-# 过期后「判断」那一步会报「尚未登录」：本机重新 `toy login`，再执行
+# 想启用时：本机 `toy login`，把登录态写进仓库 Secret，并把下面 TOY_ID 改成自己的应用 ID：
 #   node -p 'require(process.env.HOME+"/.toy/session.json").session_token' | gh secret set TOY_CLI_SESSION_TOKEN
-# 这个工作流只响应定时与手动触发，外部 PR 拿不到这个 Secret。
+# 然后在 Actions 页手动 Run workflow。判据（只在内容真有变化时才送审）见 scripts/toy/should-publish.ts。
 
 on:
-  schedule:
-    # 02:30 UTC = 北京时间 10:30，排在早上那次同步（09:40）之后，也落在平台审核的工作时间里
-    - cron: '30 2 * * *'
   workflow_dispatch:
     inputs:
       force:
@@ -37,7 +33,27 @@ env:
   TOY_NO_UPDATE_CHECK: '1'
 
 jobs:
+  # Secrets 不能直接写进 job 的 if 表达式，所以用一个前置 job 把「有没有凭据」变成 output。
+  guard:
+    runs-on: ubuntu-latest
+    outputs:
+      ok: ${{ steps.check.outputs.ok }}
+    steps:
+      - name: 检查 Toy 凭据
+        id: check
+        env:
+          TOY_CLI_SESSION_TOKEN: ${{ secrets.TOY_CLI_SESSION_TOKEN }}
+        run: |
+          if [ -z "$TOY_CLI_SESSION_TOKEN" ]; then
+            echo "::notice::未配置 TOY_CLI_SESSION_TOKEN，跳过 B 站 Toy 发布；本仓库由 GitHub Pages 发布"
+            echo "ok=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "ok=true" >> "$GITHUB_OUTPUT"
+          fi
+
   publish:
+    needs: guard
+    if: needs.guard.outputs.ok == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 30
 

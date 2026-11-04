@@ -74,3 +74,9 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# 本地部署验证的中间产物（不属于仓库）
+/.verify/
+/out-full/
+/.build-pages.log
+/.build-full.log

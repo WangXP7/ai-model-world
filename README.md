@@ -1,5 +1,18 @@
 # 大模型世界 · AI Model World
 
+> **本仓库是 [liyupi/ai-model-world](https://github.com/liyupi/ai-model-world) 的 fork 自建部署版。**
+> 原项目由程序员鱼皮以 MIT 协议开源，下方正文均为原项目说明；本 fork 保留全部页面、数据与管线，
+> 只补上了「自己跑起来」所需的部署链路。
+>
+> **在线站点：<https://wangxp7.github.io/ai-model-world/>**
+>
+> [![部署 GitHub Pages](https://github.com/WangXP7/ai-model-world/actions/workflows/pages.yml/badge.svg)](https://github.com/WangXP7/ai-model-world/actions/workflows/pages.yml)
+> [![同步模型数据](https://github.com/WangXP7/ai-model-world/actions/workflows/sync.yml/badge.svg)](https://github.com/WangXP7/ai-model-world/actions/workflows/sync.yml)
+>
+> 部署架构、仓库设置与踩坑记录见 [docs/SELF-HOST.md](docs/SELF-HOST.md)。
+
+---
+
 AI 模型多到记不住，新闻里天天蹦出新名字，可你很难说清此刻到底谁最强、谁最便宜、谁刚出生。
 这个站把五百多个大模型搬进了一座像素小镇，每个模型都是住在厂商小屋里的一个角色，
 你进来扫一眼就知道当下的格局。

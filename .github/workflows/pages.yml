@@ -1,0 +1,80 @@
+name: 部署 GitHub Pages
+
+# 自建部署版的发布链路：把 Next.js 静态导出构建好，交给 GitHub Pages 官方部署 Action 发布。
+#
+# 本仓库是 fork，站点挂在项目页 https://wangxp7.github.io/ai-model-world/ 下，
+# 所以构建时必须注入 NEXT_BASE_PATH：Next 会给 next/link 与 _next/ 产物加前缀，
+# 而 src/lib/asset.ts 会给手写在内联样式 / fetch 里的精灵图、字体、搜索索引补上同一前缀。
+# 若以后改用自定义域名（站点根不再是 /ai-model-world/），把下面这个 env 删掉即可。
+#
+# 触发来源：
+#   push(main)            代码改动 → 立即重新发布
+#   repository_dispatch   sync.yml 写入新快照后主动通知（GITHUB_TOKEN 的 push 不会触发新工作流）
+#   workflow_dispatch     Actions 页手动重发
+#   schedule              兜底：即使通知链路失效，每天也重建两次（北京时间 11:10 / 23:10，
+#                         落在两次数据同步 09:40 / 21:40 之后）
+
+on:
+  push:
+    branches: [main]
+  repository_dispatch:
+    types: [data-synced]
+  workflow_dispatch:
+  schedule:
+    - cron: '10 3,15 * * *'
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: github-pages
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/configure-pages@v6
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: npm
+
+      - run: npm ci
+
+      # prebuild 钩子会先跑 npm run assets：由 data/models.json 确定性重建
+      # public/sprites/ 与 public/search-index.json，二者都不进仓库。
+      # Next 16 的静态导出直接写进 distDir，所以这里让产物落在 out/。
+      - name: 构建静态导出
+        env:
+          NEXT_BASE_PATH: /ai-model-world
+          NEXT_DIST_DIR: out
+        run: npm run build
+
+      # 这里刻意保留 App Router 的 .txt 预取负载。B 站 Toy 包（scripts/toy/pack.ts）
+      # 因为平台有单文件体积限制才把它们删掉，代价是客户端导航会刷一串 404；
+      # GitHub Pages 没有这个限制，且这些文本压缩率极高，留着体验与源站完全一致。
+      # .nojekyll 只是保险：workflow 方式部署本来就不走 Jekyll，_next/ 不会被过滤。
+      - name: 添加 Pages 标记
+        run: |
+          touch out/.nojekyll
+          echo "产物体积："
+          du -sh out
+
+      - uses: actions/upload-pages-artifact@v5
+        with:
+          path: out
+
+      - name: 发布到 GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v5

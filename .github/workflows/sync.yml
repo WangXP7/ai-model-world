@@ -2,11 +2,15 @@ name: 同步模型数据
 
 # 这个工作流是整个「发布后不用人管」承诺的发动机。
 #
-# 它每天两次抓上游、校验、把快照提交回仓库，Vercel 与 EdgeOne 收到 push 后各自重新构建。
+# 它每天两次抓上游、校验、把快照提交回仓库，然后主动通知 pages.yml 重新构建并发布
+# GitHub Pages（GITHUB_TOKEN 产生的 push 不会触发新的工作流，所以必须显式通知）。
 # 抓取跑在 GitHub Actions 的境外节点上，因此能访问 Hugging Face——
 # 那是补齐参数量与开源许可证的唯一来源，从中国大陆是连不上的。
 #
 # 精灵图不在这里生成：它是构建期产物，由部署平台的 prebuild 钩子跑。
+#
+# 本仓库是 fork：定时工作流默认关闭，需在 Actions 页手动启用一次（或调
+# PUT /repos/{owner}/{repo}/actions/workflows/{id}/enable）。启用后 cron 才会生效。
 
 on:
   schedule:
@@ -59,6 +63,7 @@ jobs:
         run: npm run sync
 
       - name: 提交快照
+        id: commit
         run: |
           if git diff --quiet -- data/; then
             echo "上游无变化，跳过提交"
@@ -81,6 +86,23 @@ jobs:
           ")
           git commit -m "chore(data): 同步模型快照 — ${summary}"
           git push
+          echo "changed=true" >> "$GITHUB_OUTPUT"
+
+      # GITHUB_TOKEN 产生的 push 不会触发别的工作流，所以显式通知 pages.yml 重新发布。
+      # 这一步失败不该把「数据已同步」判成失败：pages.yml 还有定时兜底，故 continue-on-error。
+      - name: 通知站点重建
+        if: steps.commit.outputs.changed == 'true'
+        continue-on-error: true
+        uses: actions/github-script@v9
+        with:
+          script: |
+            await github.rest.repos.createDispatchEvent({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              event_type: 'data-synced',
+              client_payload: { sync_run_id: context.runId },
+            });
+            core.info('已通知 pages.yml 重新构建并发布站点');
 
       # 闸门拦截时留下证据，方便回溯是哪一次上游出了问题
       - name: 上传同步报告

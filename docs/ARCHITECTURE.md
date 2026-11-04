@@ -186,3 +186,9 @@ scale.xxxOf(model)                   ← 视图层：逐个模型问标尺要档
 
 同一份代码、同一份静态产物，两边独立构建。
 资源全部本地化，不依赖 Google Fonts 等在国内不可达的第三方。
+
+> **本 fork 的部署差异**：`WangXP7/ai-model-world` 没有接 Vercel / EdgeOne，
+> 改为 GitHub Pages 项目页（`https://wangxp7.github.io/ai-model-world/`），
+> 由 `.github/workflows/pages.yml` 构建并发布。因为挂在子路径下，构建时注入
+> `NEXT_BASE_PATH=/ai-model-world`；同步工作流的快照提交通过 `repository_dispatch`
+> 通知发布工作流重新构建。完整说明见 [SELF-HOST.md](./SELF-HOST.md)。
