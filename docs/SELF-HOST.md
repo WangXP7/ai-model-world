@@ -182,5 +182,55 @@ gh workflow run pages.yml --repo WangXP7/ai-model-world --ref main
 
 页面、既有数据管线、角色形象、文案生成逻辑一律未改，MIT 许可与
 [NOTICE.md](../NOTICE.md) 的第三方署名义务照旧；站内 `/credits/` 页与页脚的原作者链接均保留。
-本 fork 只新增/调整了 `.github/workflows/`、一个工作流层的 `scripts/sync/health.ts`
-守卫、README 顶部说明与本文档，以及 `docs/ARCHITECTURE.md` 末尾的部署差异备注。
+本 fork 只新增/调整了 `.github/workflows/`、工作流层的 `scripts/sync/health.ts` 守卫、
+构建期的 `scripts/pages/split-flight.ts` 首屏瘦身、README 顶部说明与本文档，
+以及 `docs/ARCHITECTURE.md` 末尾的部署差异备注。
+
+---
+
+## 十、访问加速（2026-11-04 追加）
+
+### 先纠正一个判断
+
+上一轮把「首页 HTML 2.3 MB」当成了传输量，其实 **GitHub Pages 的 CDN 已经 gzip**：
+`Content-Encoding: gzip`、`Content-Length` 157 KB，浏览器实际只下 157 KB。
+实测同一份 157 KB 有时 4 秒下完、有时 60 秒超时——瓶颈是国际链路丢包/限速，
+不是体积。因此「把首页降到 200 KB」这个说法不准确，纯粹瘦身治不了慢。
+
+### 已做两件事
+
+**1. 首屏瘦身（`scripts/pages/split-flight.ts`，已接入 `pages.yml`）**
+把大页面内联的 React Flight 数据（`self.__next_f.push`）挪到同目录 `.flight.js`，
+并在 `<head>` 加 `<link rel=preload as=script>`，避免同步外链多出一个阻塞 RTT。
+共处理 161 个页面，首页 HTML **2.3 MB → 924 KB**，全站 HTML 182 MB → 151 MB。
+浏览器复验：水合正常、搜索索引成功加载、零关键资源失败。
+不破坏任何页面逻辑，页面源码一行未改。
+
+**2. 国内节点镜像（真正解决秒开）**
+另构建一份**不带 `NEXT_BASE_PATH`** 的根路径产物（独立域名不能带 `/ai-model-world/` 前缀），
+发布到 <https://under-the-eaves.app.workbuddy.host/>。
+实测首页 0.34–0.54 秒返回，时间线 / 排行榜 / credits / 字体 / 搜索索引全部 200，
+裸路径与带 `?v=` 的响应内容一致（无边缘缓存污染）。
+
+> ⚠️ **发布位副作用**：该链接是此工作区唯一的发布位，原先挂的是「Tidewater 海岛钓鱼」。
+> 工具按工作区复用 appId，即使换一个工作区外的目录也不会新建独立应用，
+> 所以这次发布覆盖了 Tidewater 的在线内容。它的本地文件
+> （`GoodCase/tidewater-fish-site/`）完好，随时可从该目录重新发布恢复，
+> 但那会再次覆盖当前站点——两者只能二选一。
+
+### 还没做的：Vercel / EdgeOne / 自定义域名
+
+这三项需要外部账号或自有域名，本轮没有凭据因此未接。接入方式已备好：
+
+| 方式 | 做法 |
+|---|---|
+| Vercel / EdgeOne Pages | 导入仓库；构建命令 `NEXT_DIST_DIR=out npm run build`（**不要**设 `NEXT_BASE_PATH`）；产物目录 `out` |
+| 自定义域名 + CDN | Pages 设置里填域名，在 `out/` 放 `CNAME`，并删掉 `pages.yml` 里的 `NEXT_BASE_PATH: /ai-model-world` |
+
+### 本地构建的环境坑
+
+本机通过 `NODE_OPTIONS=--require .../node-language-shim.cjs` 注入了批量删除保护，
+`next build` 清理 `distDir` 时会被挂起（表现为卡在 `Running next.config.ts` 后不动）。
+本地复现时前置 `NODE_OPTIONS=` 清空即可；GitHub Actions 上没有这个钩子。
+另外 Windows Git Bash 会把以 `/` 开头的环境变量改写成 Windows 绝对路径，
+设 `NEXT_BASE_PATH=/ai-model-world` 时必须加 `MSYS_NO_PATHCONV=1`。

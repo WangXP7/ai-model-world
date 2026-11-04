@@ -64,9 +64,14 @@ jobs:
       # 这里刻意保留 App Router 的 .txt 预取负载。B 站 Toy 包（scripts/toy/pack.ts）
       # 因为平台有单文件体积限制才把它们删掉，代价是客户端导航会刷一串 404；
       # GitHub Pages 没有这个限制，且这些文本压缩率极高，留着体验与源站完全一致。
+      #
+      # split-flight 把大页面里内联的 React Flight 数据挪到同目录 .flight.js，
+      # 并在 <head> 加 preload（不多出一个同步脚本 RTT）。首页 HTML 2.3MB → 约 900KB，
+      # 解析与内存开销明显下降；CDN 侧仍会 gzip，传输体积不是瓶颈，见 docs/SELF-HOST.md。
       # .nojekyll 只是保险：workflow 方式部署本来就不走 Jekyll，_next/ 不会被过滤。
-      - name: 添加 Pages 标记
+      - name: 首屏瘦身并添加 Pages 标记
         run: |
+          npx tsx scripts/pages/split-flight.ts out
           touch out/.nojekyll
           echo "产物体积："
           du -sh out

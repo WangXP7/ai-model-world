@@ -4,7 +4,9 @@
 > 原项目由程序员鱼皮以 MIT 协议开源，下方正文均为原项目说明；本 fork 保留全部页面、数据与管线，
 > 只补上了「自己跑起来」所需的部署链路。
 >
-> **在线站点：<https://wangxp7.github.io/ai-model-world/>**
+> **在线站点**：<https://wangxp7.github.io/ai-model-world/> ·
+> [国内加速镜像](https://under-the-eaves.app.workbuddy.host/)（国内访问推荐）
+> 部署与加速说明见 [docs/SELF-HOST.md](docs/SELF-HOST.md)。
 >
 > [![部署 GitHub Pages](https://github.com/WangXP7/ai-model-world/actions/workflows/pages.yml/badge.svg)](https://github.com/WangXP7/ai-model-world/actions/workflows/pages.yml)
 > [![同步模型数据](https://github.com/WangXP7/ai-model-world/actions/workflows/sync.yml/badge.svg)](https://github.com/WangXP7/ai-model-world/actions/workflows/sync.yml)
