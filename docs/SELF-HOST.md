@@ -94,12 +94,13 @@
 7. **某个上游整体挂掉时，管线闸门可能放行坏数据。** 2026-11-04 手动跑同步时
    LiveBench 返回「没有拿到任何可用 release」，`sync-report.json` 里
    `sources.livebench.ok=false`，但 `accepted=true`、`failures=[]`：闸门盯的是存活模型数
-   与字段覆盖率，没把「一整类成绩静默清空」判成失败，一次提交删掉约 3975 条
-   `coding[]` / `scores[]` 成绩，榜单参赛模型数 114 → 1、134 → 3。
+   与字段覆盖率，而 LiveBench 只占全站成绩 7.8%（496 条 → 8 条，总量 6365 → 5877，
+   跌幅 7.67%），根本触发不了相对跌幅阈值；在 pretty-printed JSON 里表现为约 3975 行删除，
+   榜单参赛模型数 114 → 1、134 → 3。
    处理：把 `data/` 回滚到上一份完整快照（732 模型 / 6365 条成绩），并在 `sync.yml`
-   提交步骤前加 `scripts/sync/health.ts` —— 比较新旧快照的成绩条目总数，
-   跌幅超 30% 就不提交，只发 `::warning::` 保留旧数据、不让链路变红也不误开 issue；
-   上游恢复后自动放行。既有数据管线代码一行未改。
+   提交步骤前加 `scripts/sync/health.ts` —— 关键源 `ok=false`、按来源成绩跌幅 >50%、
+   或总跌幅 >15% 任一命中就不提交，只发 `::warning::` 保留旧数据、
+   不让链路变红也不误开 issue；上游恢复后自动放行。既有数据管线代码一行未改。
 
 > 本地 Windows Git Bash 补充坑：以 `/` 开头的环境变量会被 MSYS 改写成 Windows 绝对路径，
 > `NEXT_BASE_PATH=/ai-model-world` 会变成 `D:/.../ai-model-world` 并让 `next build` 报
